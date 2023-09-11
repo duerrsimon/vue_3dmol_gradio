@@ -62,6 +62,28 @@ const App = new Vue({
       "CO": "Cobalt",
       "NI": "Nickel",
       "CU": "Copper",
+    },
+    aa_map: {
+      "ALA": "A",
+      "ARG": "R",
+      "ASN": "N",
+      "ASP": "D",
+      "CYS": "C",
+      "GLN": "Q",
+      "GLU": "E",
+      "GLY": "G",
+      "HIS": "H",
+      "ILE": "I",
+      "LEU": "L",
+      "LYS": "K",
+      "MET": "M",
+      "PHE": "F",
+      "PRO": "P",
+      "SER": "S",
+      "THR": "T",
+      "TRP": "W",
+      "TYR": "Y",
+      "VAL": "V",
     }
 
 
@@ -83,35 +105,47 @@ const App = new Vue({
       // Filter objects based on currentchain
       const filteredObjects = this.selectedAtoms.filter(obj => obj.chain === this.currentChain);
 
+      //if no atoms selected in currentchain, return all
+
+      if (filteredObjects.length == 0) {
+        if (this.view != null) {
+          let allIndexes = Object.values(this.zeroIndexedSeq[this.currentChain])
+          return allIndexes[0] + "-" + allIndexes[allIndexes.length - 1]
+        }
+      }
+
       // Extract resi values from filtered objects
       const resiValues = filteredObjects.map(obj => parseInt(obj.resi, 10));
 
       // Sort the resi values
       resiValues.sort((a, b) => a - b);
 
+
       // Generate the range string
       let rangeString = "";
-      let startRange = resiValues[0];
-      let endRange = resiValues[0];
+      if (this.view != null) {
+        let startRange = this.zeroIndexedSeq[this.currentChain][resiValues[0]];
+        let endRange = this.zeroIndexedSeq[this.currentChain][resiValues[0]];
 
-      for (let i = 1; i < resiValues.length; i++) {
-        if (resiValues[i] === endRange + 1) {
-          endRange = resiValues[i];
-        } else {
-          if (startRange !== endRange) {
-            rangeString += `${startRange}-${endRange},`;
+        for (let i = 1; i < resiValues.length; i++) {
+          if (this.zeroIndexedSeq[this.currentChain][resiValues[i]] === endRange + 1) {
+            endRange = this.zeroIndexedSeq[this.currentChain][resiValues[i]];
           } else {
-            rangeString += `${startRange},`;
+            if (startRange !== endRange) {
+              rangeString += `${startRange}-${endRange},`;
+            } else {
+              rangeString += `${startRange},`;
+            }
+            startRange = this.zeroIndexedSeq[this.currentChain][resiValues[i]];
+            endRange = this.zeroIndexedSeq[this.currentChain][resiValues[i]];
           }
-          startRange = resiValues[i];
-          endRange = resiValues[i];
         }
-      }
 
-      if (startRange !== endRange) {
-        rangeString += `${startRange}-${endRange}`;
-      } else {
-        rangeString += `${startRange}`;
+        if (startRange !== endRange) {
+          rangeString += `${startRange}-${endRange}`;
+        } else {
+          rangeString += `${startRange}`;
+        }
       }
 
       return rangeString;
@@ -134,35 +168,11 @@ const App = new Vue({
       }
       return {}
     },
-    sequence() {
+    seq() {
+
+      let seq = {}
+
       if (this.view != null) {
-
-        let aa_map = {
-          "ALA": "A",
-          "ARG": "R",
-          "ASN": "N",
-          "ASP": "D",
-          "CYS": "C",
-          "GLN": "Q",
-          "GLU": "E",
-          "GLY": "G",
-          "HIS": "H",
-          "ILE": "I",
-          "LEU": "L",
-          "LYS": "K",
-          "MET": "M",
-          "PHE": "F",
-          "PRO": "P",
-          "SER": "S",
-          "THR": "T",
-          "TRP": "W",
-          "TYR": "Y",
-          "VAL": "V",
-        }
-
-        let seq = {}
-
-
         for (let i = 0; i < this.nModels; i++) {
 
           seq[i] = {}
@@ -174,17 +184,39 @@ const App = new Vue({
             seq[i][atom.chain][atom.resi] = atom.resn
           })
         }
-
+      }
+      return seq
+    },
+    zeroIndexedSeq() {
+      //iterate over current model in seq and get continous zero indexed mapping from resids to index
+      let zeroIndexedSeq = {}
+      if (this.view != null) {
+        let index = 0
+        Object.keys(this.seq[this.currentModel]).forEach((chain) => {
+          zeroIndexedSeq[chain] = {}
+          Object.keys(this.seq[this.currentModel][chain]).forEach((resid) => {
+            if (this.aa_map[this.seq[this.currentModel][chain][resid]] != undefined) {
+              zeroIndexedSeq[chain][resid] = index
+              index += 1
+            }
+          })
+        }
+        )
+      }
+      return zeroIndexedSeq
+    },
+    sequence() {
+      if (this.view != null) {
         //use current chain to render sequence as array of 10s with mapping to single letters
         let seqArray = []
         let tempArray = []
-        Object.keys(seq[this.currentModel][this.currentChain]).forEach((index) => {
-          residue = seq[this.currentModel][this.currentChain][index]
+        Object.keys(this.seq[this.currentModel][this.currentChain]).forEach((index) => {
+          residue = this.seq[this.currentModel][this.currentChain][index]
           let key = ""
-          if (aa_map[residue] === undefined) {
+          if (this.aa_map[residue] === undefined) {
             key = residue
           } else {
-            key = aa_map[residue]
+            key = this.aa_map[residue]
           }
           if (key != "HOH") {
             tempArray.push({ "resi": index, "resn": key })
