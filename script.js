@@ -526,7 +526,10 @@ const App = new Vue({
         selectables: document.getElementsByClassName('item-selectable'),
       })
       //parent0 is for nested iframes, window top for all other cases
+      console.log("sending message")
+      console.log(window)
       window.parent[0].postMessage(this.contigRep, '*')
+      window.parent[1].postMessage(this.contigRep, '*')
       window.top.postMessage(this.contigRep, '*')
     }
   },
