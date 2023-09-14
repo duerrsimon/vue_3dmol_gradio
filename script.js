@@ -527,9 +527,16 @@ const App = new Vue({
       })
       //parent0 is for nested iframes, window top for all other cases
       console.log("sending message")
-      console.log(window)
-      window.parent[0].postMessage(this.contigRep, '*')
-      window.parent[1].postMessage(this.contigRep, '*')
+      try {
+          window.top[0].postMessage(this.contigRep, '*')
+      } catch (error) {
+        console.log("window.top[0] not defined");
+      }
+      try {
+          window.top[1].postMessage(this.contigRep, '*')
+      } catch (error) {
+        console.log("window.top[1] not defined");
+      }
       window.top.postMessage(this.contigRep, '*')
     }
   },
